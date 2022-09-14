@@ -3,3 +3,5 @@
 .RData
 .Ruserdata
 api_key.txt
+.DS_Store
+MKR_delegate_targeting.html

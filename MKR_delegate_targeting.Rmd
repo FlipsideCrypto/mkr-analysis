@@ -53,28 +53,23 @@ the 'holders' number we commonly see in tools like etherscan.
 
 ![Etherscan screenshot of MKR Holders](mkr_holders_screenshot.png)
 
-Of the 87,000 Holders of MKR, only 6,375 (7%) have at least 1 whole MKR (~$700 at time of writing).
-Given that MKR uses on-chain voting on the Ethereum Layer 1, it may be cost prohibitive in ETH gas 
-terms for smaller holders to delegate and vote on-chain (as opposed to an off-chain tool like Snapshot).
-
 ```{r, message = FALSE, warning= FALSE}
 library(shroomDK)
 library(ethscore)
+library(scales)
 library(dplyr)
 library(reactable)
 library(plotly)
 
-
 mkr <- tolower("0x9f8f72aa9304c8b593d555f12ef6589cc3a579a2")
+total_supply <- 977631
+total_holders <- 87789
+
 max_block <- 15440000 # August 30th 11AM UTC
 api_key <- readLines("api_key.txt") # get a free key @ https://sdk.flipsidecrypto.xyz/shroomdk
 
 mkr_balances <- address_token_balance(token_address = mkr, min_tokens = 1, 
                                       block_max = max_block, api_key = api_key)
-
-message(
-  paste0('There are ', nrow(mkr_balances), ' holders of MKR with at least 1 MKR (as of block: ', max_block, ")")
-)
 
 plot_ly(mkr_balances, x = ~ADDRESS_TYPE, y = ~log(NEW_VALUE), color = ~ADDRESS_TYPE,
         boxpoints = "all", jitter = 0.3,
@@ -90,7 +85,22 @@ plot_ly(mkr_balances, x = ~ADDRESS_TYPE, y = ~log(NEW_VALUE), color = ~ADDRESS_T
          yaxis = list(title = 'LOG(MKR Balance)')
   )
 
+num_active_eoas <- nrow(mkr_balances %>% dplyr::filter(ADDRESS_TYPE == "EOA"))
+mkr_held_by_active_eoas <- mkr_balances %>% 
+  dplyr::filter(ADDRESS_TYPE == "EOA") %>% 
+  summarise(sum(NEW_VALUE)) %>% 
+  as.numeric() %>% floor()
+
 ```
+
+Of the 
+`r scales::label_comma()(total_holders)` Holders of MKR, only 
+`r label_comma()(nrow(mkr_balances))` (
+`r floor(100*nrow(mkr_balances)/total_holders)`%) 
+have at least 1 whole MKR (~$700 at time of writing).
+
+Given that MKR uses on-chain voting on the Ethereum Layer 1, it may be cost prohibitive in ETH gas 
+terms for smaller holders to delegate and vote on-chain (as opposed to an off-chain tool like Snapshot).
 
 Because holdings of most ERC20s is highly skewed (i.e., most addresses have very few MKR and a few have very large amounts)
 a LOG scale is used to more cleanly see differences in the distribution of MKR across Address Types.
@@ -98,12 +108,15 @@ a LOG scale is used to more cleanly see differences in the distribution of MKR a
 The key insights to note:
 
     - Non-targets like contracts, cold storage EOAs, and central exchange EOAs have a wide variance in their MKR holdings.
-    - Target EOAs (Orange, hover over to see non-LOG values) have a median of 2 MKR each and a 75% percentile of ~95 MKR.
     - The top holders of MKR are contracts and central exchange EOAs.
 
-In practical terms, of the 977,000 MKR total supply held by 87,000 holders (Etherscan above), there are only 
-5,150 EOAs active and with enough MKR (1+) to be delegate targets. These EOAs hold 356,015 MKR, only 36% of supply.
-
+In practical terms, of the 
+`r label_comma()(total_supply)` MKR total supply held by 
+`r label_comma()(total_holders)` holders (Etherscan above), there are only 
+`r label_comma()(num_active_eoas)` EOAs active and with enough MKR (1+) to be delegate targets. 
+These EOAs hold 
+`r label_comma()(mkr_held_by_active_eoas)` MKR, only
+`r floor(100*mkr_held_by_active_eoas/total_supply)`% of supply.
 
 ```{r}
 mkr_smmry <- mkr_balances %>% group_by(ADDRESS_TYPE) %>% 
@@ -129,30 +142,29 @@ columns = list(
 
 
 ```{r}
-message(
-  paste0(
-    'MKR Governance Contract has ',
-    scales::label_comma()(floor(mkr_balances[
+
+mkr_gov <- floor(mkr_balances[
       mkr_balances$ADDRESS == tolower('0x0a3f6849f78076aefaDf113F5BED87720274dDC0'), "NEW_VALUE"]
-    )), 
-    ' MKR'
-)
-)
+    )
+mkr_available <- mkr_gov + mkr_held_by_active_eoas
 ```
 
+The MKR governance contract: `0x0a3f6849f78076aefadf113f5bed87720274ddc0` held 
+`r label_comma()(mkr_gov)` MKR as of block
+`r label_comma()(max_block)`. The Largest contract and overall address holder of MKR. 
 
-The MKR governance contract: 0x0a3f6849f78076aefaDf113F5BED87720274dDC0 held 188,866 MKR as of 
-block 15440000. The Largest contract and overall address holder of MKR. 
+This means of the total 
+`r label_comma()(total_supply)` MKR:
+`r label_comma()(mkr_available)`(~
+`r floor(100*mkr_available/total_supply)`%) is practically available for delegation.
 
-This means of the total 977,631 MKR: 544,881 (~56%) is practically available for delegation.
-
-    - 356,015 in EOAs w/ 1+ MKR that are not in the governance contract.
-    - 188,866 in the governance contract whose delegation can be fought over pvp style.
-    - Note: excluding the single gnosis-safe holding 9,556 for now.
+    - `r label_comma()(mkr_held_by_active_eoas)` in EOAs w/ 1+ MKR that are not in the governance contract.
+    - `r label_comma()(mkr_gov)` in the governance contract whose delegation can be fought over pvp style.
+    - Note: excluding the low number of gnosis safes for now.
     
 At time of writing, Flipside Crypto has ~9,000 MKR delegated to it (4.7% of current governance).
 
-## Time-Weighted MKR Holders
+# Time-Weighted MKR Holders
 
 Instead of analyzing holders based on current balance on MKR, we can add weight for *having held* MKR 
 for a long time. For example, weighing an address whose held 10 MKR for 100,000 blocks as a better delegate
@@ -214,6 +226,82 @@ plot_ly(mkr_tw_bal, x = ~log(NEW_VALUE), y = ~log(TIME_WEIGHTED_SCORE),
          yaxis = list(title = 'LOG(MKR TW Score)')
   )
 
+```
+
+# Address Selection
+
+```{r}
+
+select_eoas <- mkr_tw_bal %>% dplyr::filter(ADDRESS_TYPE == "EOA", 
+                                            TIME_WEIGHTED_SCORE >= 100000,
+                                            NEW_VALUE >= 50) 
+
+plot_ly(select_eoas, x = ~NEW_VALUE, y = ~TIME_WEIGHTED_SCORE, 
+        color = ~ADDRESS_TYPE, type = 'scatter',
+        hoverinfo = 'text',
+        hovertext = ~paste0(
+          'RAW-MKR Balance: ',
+          scales::label_comma()(floor(NEW_VALUE)),
+          '\n Raw MKR TW Score: ',
+          scales::label_comma()(floor(TIME_WEIGHTED_SCORE))
+        )
+) %>% 
+  layout(title = '\n Current MKR Balance vs Time-Weighted Score',
+         xaxis = list(title = 'Current MKR Balance'),
+         yaxis = list(title = 'MKR TW Score')
+  )
 
 ```
 
+Subsetting to target EOAs (i.e., not central exchange associated nor cold storage) with 
+at least 50 MKR and a time-weighted score of 100,000 (equivalent of holding 100 MKR for 1M blocks) 
+results in 
+`r nrow(select_eoas)` MKR holders. Unlike previous visuals, the above visual is *not* LOG adjusted, so the skew in both amount and time held is very noticeable.
+
+To assess fitness for direct outreach, the number of transactions, days active, and last transaction date 
+are pulled for the select EOAs. 
+
+```{r}
+query <- {
+"
+with select_tx AS (
+SELECT BLOCK_TIMESTAMP, tx_hash, FROM_ADDRESS as ADDRESS FROM ethereum.core.fact_transactions
+WHERE FROM_ADDRESS IN ('ADDRESSLIST')
+)
+
+SELECT ADDRESS, COUNT(*) as num_tx,
+count(DISTINCT(date_trunc('DAY', block_timestamp))) as num_days,
+MAX(block_timestamp) as last_tx_date FROM
+select_tx 
+GROUP BY ADDRESS
+"
+}
+
+alist <- paste0(select_eoas$ADDRESS, collapse = "','")
+query <- gsub('ADDRESSLIST', replacement = alist, x = query)
+
+select_stats <- auto_paginate_query(query, api_key)
+
+eoa_stats <- merge(select_eoas, select_stats, by = 'ADDRESS')
+eoa_stats$LAST_TX_DATE <- as.Date(eoa_stats$LAST_TX_DATE)
+
+```
+
+
+```{r}
+plot_ly(eoa_stats, x = ~log(NEW_VALUE), y= ~as.Date(LAST_TX_DATE),
+        color = ~NUM_TX, type = 'scatter',
+        hoverinfo = 'text',
+        hovertext = ~paste0(
+          'RAW-MKR Balance: ',
+          scales::label_comma()(floor(NEW_VALUE)),
+          '\n Raw MKR TW Score: ',
+          scales::label_comma()(floor(TIME_WEIGHTED_SCORE))
+        )
+) %>% 
+  layout(title = '\n Transaction Count by MKR holdings and most recent tx date',
+         xaxis = list(title = 'LOG(Current MKR Balance)'),
+         yaxis = list(title = 'Date of Last TX',
+                      range = c(min(eoa_stats$LAST_TX_DATE), max(eoa_stats$LAST_TX_DATE)))
+  )
+```

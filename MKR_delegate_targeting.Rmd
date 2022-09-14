@@ -7,21 +7,25 @@ output:
     code_folding: hide
 editor_options: 
   chunk_output_type: console
+  markdown: 
+    wrap: 72
 ---
 
 # Intro
 
-Flipside's governance team works deeply with the MakerDAO team to create, discuss, and vote on proposals that
-ultimately improve Maker's market position and revenue model. In order to increase our influence 
-at Maker, we seek delegation of MKR to our voting address.
+Flipside's governance team works deeply with the MakerDAO team to
+create, discuss, and vote on proposals that ultimately improve Maker's
+market position and revenue model. In order to increase our influence at
+Maker, we seek delegation of MKR to our voting address.
 
-This markdown details use of the new Flipside `ethscore` package to identify potential
-addresses to target to request/earn delegation of their MKR to our voting address.
+This markdown details use of the new Flipside `ethscore` package to
+identify potential addresses to target to request/earn delegation of
+their MKR to our voting address.
 
 # Package Requirements
 
-ethscore uses shroomDK to access Flipside data for its analysis. The best way to install these 
-packages is via devtools install_github().
+ethscore uses shroomDK to access Flipside data for its analysis. The
+best way to install these packages is via devtools install_github().
 
 ```{r, eval = FALSE,  message = FALSE, warning= FALSE}
 # This chunk does not eval
@@ -32,24 +36,30 @@ packages is via devtools install_github().
 
 # Addressable Market of MKR Delegation
 
-Not all holders of an ERC20 are externally owned accounts (EOAs). Some are contract addresses,
-others are gnosis-safes. Among EOAs, there are central exchange managed EOAs for coordinating deposits and withdrawals
-on and off chain which would be inappropriate targets for delegation. Also some EOAs are 'cold storage' in that they hold a balance but have never initiated a transaction. If an EOA has never done a transaction, it is unlikely its first 
-will be delegation of a token which requires approvals and other contract interactions that the user may find risky.
+Not all holders of an ERC20 are externally owned accounts (EOAs). Some
+are contract addresses, others are gnosis-safes. Among EOAs, there are
+central exchange managed EOAs for coordinating deposits and withdrawals
+on and off chain which would be inappropriate targets for delegation.
+Also some EOAs are 'cold storage' in that they hold a balance but have
+never initiated a transaction. If an EOA has never done a transaction,
+it is unlikely its first will be delegation of a token which requires
+approvals and other contract interactions that the user may find risky.
 
-Thus, for the purposes of growing our delegation, it is imperative we understand the addressable market
-as: 
+Thus, for the purposes of growing our delegation, it is imperative we
+understand the addressable market as:
 
-    - EOAs that are active and likely human owned
-    - Gnosis safes, e.g., DAO multi-sigs.
-    - MKR in the delegate contract(s)
-        - Note: this is 'pvp' in that each MKR we are delegated from this contract is explicitly a MKR taken from another delegate. While we support competition, our first goal is to activate more MKR, not simply fight over a fixed pool.  
-    
+ - EOAs that are active and likely human owned
+ - Gnosis safes, e.g., DAO multi-sigs.
+ - MKR in the delegate contract(s)
+  - Note: this is 'pvp' in that each MKR we are delegated from this contract is explicitly a MKR taken from another delegate. While we support competition, our first goal is to activate more MKR, not simply fight over a fixed pool.  
+
 ## Current balance of MKR held by those with 1+ MKR
 
-'Dust' is common in crypto. Users make swaps of non-integer sizes and end up with balances that use many of the 
-18 decimals permitted by ERC20s, e.g., having 0.0042069 MKR (~ $3 at time of writing). This naturally inflates 
-the 'holders' number we commonly see in tools like etherscan.
+'Dust' is common in crypto. Users make swaps of non-integer sizes and
+end up with balances that use many of the 18 decimals permitted by
+ERC20s, e.g., having 0.0042069 MKR (\~ \$3 at time of writing). This
+naturally inflates the 'holders' number we commonly see in tools like
+etherscan.
 
 ![Etherscan screenshot of MKR Holders](mkr_holders_screenshot.png)
 
@@ -57,6 +67,7 @@ the 'holders' number we commonly see in tools like etherscan.
 library(shroomDK)
 library(ethscore)
 library(scales)
+library(gmp)
 library(dplyr)
 library(reactable)
 library(plotly)
@@ -93,28 +104,29 @@ mkr_held_by_active_eoas <- mkr_balances %>%
 
 ```
 
-Of the 
-`r scales::label_comma()(total_holders)` Holders of MKR, only 
+Of the `r scales::label_comma()(total_holders)` Holders of MKR, only
 `r label_comma()(nrow(mkr_balances))` (
-`r floor(100*nrow(mkr_balances)/total_holders)`%) 
-have at least 1 whole MKR (~$700 at time of writing).
+`r floor(100*nrow(mkr_balances)/total_holders)`%) have at least 1 whole
+MKR (\~\$700 at time of writing).
 
-Given that MKR uses on-chain voting on the Ethereum Layer 1, it may be cost prohibitive in ETH gas 
-terms for smaller holders to delegate and vote on-chain (as opposed to an off-chain tool like Snapshot).
+Given that MKR uses on-chain voting on the Ethereum Layer 1, it may be
+cost prohibitive in ETH gas terms for smaller holders to delegate and
+vote on-chain (as opposed to an off-chain tool like Snapshot).
 
-Because holdings of most ERC20s is highly skewed (i.e., most addresses have very few MKR and a few have very large amounts)
-a LOG scale is used to more cleanly see differences in the distribution of MKR across Address Types.
+Because holdings of most ERC20s is highly skewed (i.e., most addresses
+have very few MKR and a few have very large amounts) a LOG scale is used
+to more cleanly see differences in the distribution of MKR across
+Address Types.
 
 The key insights to note:
 
-    - Non-targets like contracts, cold storage EOAs, and central exchange EOAs have a wide variance in their MKR holdings.
-    - The top holders of MKR are contracts and central exchange EOAs.
+ - Non-targets like contracts, cold storage EOAs, and central exchange EOAs have a wide variance in their MKR holdings.
+ - The top holders of MKR are contracts and central exchange EOAs.
 
-In practical terms, of the 
-`r label_comma()(total_supply)` MKR total supply held by 
-`r label_comma()(total_holders)` holders (Etherscan above), there are only 
-`r label_comma()(num_active_eoas)` EOAs active and with enough MKR (1+) to be delegate targets. 
-These EOAs hold 
+In practical terms, of the `r label_comma()(total_supply)` MKR total
+supply held by `r label_comma()(total_holders)` holders (Etherscan
+above), there are only `r label_comma()(num_active_eoas)` EOAs active
+and with enough MKR (1+) to be delegate targets. These EOAs hold
 `r label_comma()(mkr_held_by_active_eoas)` MKR, only
 `r floor(100*mkr_held_by_active_eoas/total_supply)`% of supply.
 
@@ -140,7 +152,6 @@ columns = list(
 
 ```
 
-
 ```{r}
 
 mkr_gov <- floor(mkr_balances[
@@ -149,32 +160,36 @@ mkr_gov <- floor(mkr_balances[
 mkr_available <- mkr_gov + mkr_held_by_active_eoas
 ```
 
-The MKR governance contract: `0x0a3f6849f78076aefadf113f5bed87720274ddc0` held 
-`r label_comma()(mkr_gov)` MKR as of block
-`r label_comma()(max_block)`. The Largest contract and overall address holder of MKR. 
+The MKR governance contract:
+`0x0a3f6849f78076aefadf113f5bed87720274ddc0` held
+`r label_comma()(mkr_gov)` MKR as of block `r label_comma()(max_block)`.
+The Largest contract and overall address holder of MKR.
 
-This means of the total 
-`r label_comma()(total_supply)` MKR:
-`r label_comma()(mkr_available)`(~
-`r floor(100*mkr_available/total_supply)`%) is practically available for delegation.
+This means of the total `r label_comma()(total_supply)` MKR:
+`r label_comma()(mkr_available)`(\~
+`r floor(100*mkr_available/total_supply)`%) is practically available for
+delegation.
 
-    - `r label_comma()(mkr_held_by_active_eoas)` in EOAs w/ 1+ MKR that are not in the governance contract.
-    - `r label_comma()(mkr_gov)` in the governance contract whose delegation can be fought over pvp style.
-    - Note: excluding the low number of gnosis safes for now.
-    
-At time of writing, Flipside Crypto has ~9,000 MKR delegated to it (4.7% of current governance).
+ - `r label_comma()(mkr_held_by_active_eoas)` in EOAs w/ 1+ MKR that are not in the governance contract.
+ - `r label_comma()(mkr_gov)` in the governance contract whose delegation can be fought over pvp style.
+ - Note: excluding the low number of gnosis safes for now.
+
+At time of writing, Flipside Crypto has \~9,000 MKR delegated to it
+(4.7% of current governance).
 
 # Time-Weighted MKR Holders
 
-Instead of analyzing holders based on current balance on MKR, we can add weight for *having held* MKR 
-for a long time. For example, weighing an address whose held 10 MKR for 100,000 blocks as a better delegate
-target than one who has held 100 MKR for only 1,000 blocks.
+Instead of analyzing holders based on current balance on MKR, we can add
+weight for *having held* MKR for a long time. For example, weighing an
+address whose held 10 MKR for 100,000 blocks as a better delegate target
+than one who has held 100 MKR for only 1,000 blocks.
 
-Giving users 1 point per MKR for every 1,000 blocks where they held at least 0.1 MKR 
-in the range of Jan 1, 2021 (block #:11,566,000) to 
-Aug 30th 11am UTC (block # 15,440,000) it is clear there is a strong correlation
-between holding MKR now and having held it in the past- but important outliers and nuance 
-allow for more precision in targeting potential delegates.
+Giving users 1 point per MKR for every 1,000 blocks where they held at
+least 0.1 MKR in the range of Jan 1, 2021 (block #:11,566,000) to Aug
+30th 11am UTC (block \# 15,440,000) it is clear there is a strong
+correlation between holding MKR now and having held it in the past- but
+important outliers and nuance allow for more precision in targeting
+potential delegates.
 
 ```{r,  message = FALSE, warning= FALSE}
 
@@ -230,10 +245,10 @@ plot_ly(mkr_tw_bal, x = ~log(NEW_VALUE), y = ~log(TIME_WEIGHTED_SCORE),
 
 # Address Selection
 
-```{r}
+```{r, warning=FALSE, message=FALSE}
 
 select_eoas <- mkr_tw_bal %>% dplyr::filter(ADDRESS_TYPE == "EOA", 
-                                            TIME_WEIGHTED_SCORE >= 100000,
+                                            TIME_WEIGHTED_SCORE >= 10000,
                                             NEW_VALUE >= 50) 
 
 plot_ly(select_eoas, x = ~NEW_VALUE, y = ~TIME_WEIGHTED_SCORE, 
@@ -253,20 +268,24 @@ plot_ly(select_eoas, x = ~NEW_VALUE, y = ~TIME_WEIGHTED_SCORE,
 
 ```
 
-Subsetting to target EOAs (i.e., not central exchange associated nor cold storage) with 
-at least 50 MKR and a time-weighted score of 100,000 (equivalent of holding 100 MKR for 1M blocks) 
-results in 
-`r nrow(select_eoas)` MKR holders. Unlike previous visuals, the above visual is *not* LOG adjusted, so the skew in both amount and time held is very noticeable.
+Subsetting to target EOAs (i.e., not central exchange associated nor
+cold storage) with at least 50 MKR and a time-weighted score of 10,000
+(equivalent of holding 100 MKR for 100,000 blocks) results in
+`r nrow(select_eoas)` MKR holders. Unlike previous visuals, the above
+visual is *not* LOG adjusted, so the skew in both amount and time held
+is very noticeable.
 
-To assess fitness for direct outreach, the number of transactions, days active, and last transaction date 
-are pulled for the select EOAs. 
+To assess fitness for direct outreach, the number of transactions, days
+active, and last transaction date are pulled for the select EOAs.
 
-```{r}
+```{r, warning = FALSE, message = FALSE}
 query <- {
 "
 with select_tx AS (
-SELECT BLOCK_TIMESTAMP, tx_hash, FROM_ADDRESS as ADDRESS FROM ethereum.core.fact_transactions
-WHERE FROM_ADDRESS IN ('ADDRESSLIST')
+SELECT BLOCK_TIMESTAMP, TX_HASH, FROM_ADDRESS as ADDRESS FROM ethereum.core.fact_transactions
+WHERE FROM_ADDRESS IN ('ADDRESSLIST') AND 
+BLOCK_NUMBER >= _MIN_BLOCK_ AND 
+BLOCK_NUMBER <= _MAX_BLOCK_
 )
 
 SELECT ADDRESS, COUNT(*) as num_tx,
@@ -279,29 +298,180 @@ GROUP BY ADDRESS
 
 alist <- paste0(select_eoas$ADDRESS, collapse = "','")
 query <- gsub('ADDRESSLIST', replacement = alist, x = query)
+query <- gsub('_MIN_BLOCK_', replacement = min_block, x = query)
+query <- gsub('_MAX_BLOCK_', replacement = max_block, x = query)
 
 select_stats <- auto_paginate_query(query, api_key)
 
 eoa_stats <- merge(select_eoas, select_stats, by = 'ADDRESS')
 eoa_stats$LAST_TX_DATE <- as.Date(eoa_stats$LAST_TX_DATE)
 
+final_eoa <- eoa_stats %>% dplyr::filter(
+  NUM_TX < 100000,
+  NUM_DAYS <= 600,
+  NUM_DAYS >= 5,
+  LAST_TX_DATE > (max(eoa_stats$LAST_TX_DATE) - 180)
+)
+
 ```
 
+Some noticeable issues are present among this selection:
 
-```{r}
-plot_ly(eoa_stats, x = ~log(NEW_VALUE), y= ~as.Date(LAST_TX_DATE),
-        color = ~NUM_TX, type = 'scatter',
+-   `r sum(eoa_stats$NUM_TX >= 100000)` EOAs with 100,000+ Transactions
+    (bots?).
+-   `r sum(eoa_stats$NUM_DAYS >= 600)` EOAs active nearly every single
+    day in time period (bots?).
+-   `r sum(eoa_stats$NUM_DAYS <= 5)` EOAs active less than 5 days in
+    time period.
+-   `r sum(eoa_stats$LAST_TX_DATE < (max(eoa_stats$LAST_TX_DATE) - 180))`
+    EOAs inactive for last 6+ months.
+
+Subsetting to addresses with \< 100,000 tx; \< 600 days active; at least
+5 days active; and active within the last 6 months results in
+`r nrow(final_eoa)` addresses holding a total of
+`r label_comma()(sum(final_eoa$NEW_VALUE))` MKR.
+
+# Address Contact
+
+Address to address communication for direct outreach is still immature.
+To identify potential willingness to be contacted and pitched
+delegation, two outreach avenues are identified:
+
+ - The Ethereum Name Service of each address (if available) is pulled to see if any addresses willingly doxx their 
+    social media (e.g., by having their ENS in their Twitter name).
+ - Governance activity in other DAOs (i.e., Snapshot votes) for potential reach out via DAO partnerships.
+
+## ENS
+
+Using ENS NFT address `0x57f1887a8bf19b14fc0df6fd9b2acc9af147ea85` a one
+to many test of NFT ownership is identified.
+
+```{r, warning = FALSE, message = FALSE}
+
+# add these to ethscore lol 
+hex_to_bigint <- function(x = "0x5ae081a11c9e42983640ad6d4c5b2fa9dd0a0b886e1def6057c0037c33d1bba5"){
+as.character(as.bigz(x))  
+}
+
+bigint_to_hex <- function(x = "41104824783848331047501863836715107956672917465157448818057950770477717896101"){
+  
+  fill_hex <- function(x){
+  if(nchar(x) == 65){
+    x <- gsub("0x","0x0",x)
+    return(x)
+  }
+  return(x)
+}
+  
+hx <- paste0("0x", as.character(as.bigz(x), b = 16))
+hx <- unlist(lapply(hx, fill_hex))
+
+return(hx)
+
+}
+
+ens_nfts_query <- {
+"
+SELECT BLOCK_NUMBER, NFT_TO_ADDRESS as ADDRESS, TOKENID FROM ethereum.core.ez_nft_transfers
+WHERE NFT_ADDRESS = '0x57f1887a8bf19b14fc0df6fd9b2acc9af147ea85' AND 
+NFT_TO_ADDRESS IN ('ADDRESSLIST')
+"
+}
+
+addresslist <- paste0(final_eoa$ADDRESS, collapse = "','")
+ens_nfts_query <- gsub("ADDRESSLIST", addresslist, ens_nfts_query)
+ens <- auto_paginate_query(ens_nfts_query, api_key)
+
+ens$HEX_TOKENID <- bigint_to_hex(ens$TOKENID)
+
+
+ens_query <- {
+"
+SELECT DISTINCT 
+  event_inputs:name :: STRING as ens_name,
+  event_inputs:label :: STRING as hex_tokenid
+  from ethereum.core.fact_event_logs
+where 
+hex_tokenid IN ('HEXLIST')
+"
+}
+
+hexlist <- paste0(ens$HEX_TOKENID, collapse = "','")
+ens_query <- gsub("HEXLIST", hexlist, ens_query)
+
+
+ens_label <- auto_paginate_query(ens_query, api_key)
+ens_label_full <- ens_label[!is.na(ens_label$ENS_NAME), ]
+ens_label_problem <- ens_label[!(ens_label$HEX_TOKENID %in% ens_label_full$HEX_TOKENID), ]
+
+eoa_nfts <- merge(ens, ens_label_full, by = 'HEX_TOKENID', all.x = TRUE)
+
+
+eoa_label <- unique(eoa_nfts[, c("ADDRESS", "ENS_NAME")])
+  
+eoa_with_names <- merge(final_eoa, eoa_label, by = "ADDRESS", all.x = TRUE, all.y = TRUE)
+
+unique_eoa_with_name <- eoa_with_names %>% filter(!is.na(ENS_NAME))
+
+
+
+```
+
+Of the `r length(unique(eoa_with_names$ADDRESS))` target EOAs there are
+`r length(unique(unique_eoa_with_name$ADDRESS))` EOAs with at least 1
+ENS. These individuals together have
+`r length(unique(unique_eoa_with_name$ENS_NAME))` ENS names total.
+
+
+```{r, warning = FALSE, message = FALSE}
+
+eoa_name_balance <- eoa_with_names
+eoa_name_balance$has_ENS <- ifelse(is.na(eoa_name_balance$ENS_NAME), "No ENS", "Has ENS")
+eoa_name_balance <- unique(eoa_name_balance[, c("ADDRESS","NEW_VALUE","NUM_TX","NUM_DAYS","LAST_TX_DATE","has_ENS")])
+
+plot_ly(eoa_name_balance, x = ~has_ENS, y = ~log(NEW_VALUE), color = ~has_ENS,
+        boxpoints = "all", jitter = 0.3,
         hoverinfo = 'text',
         hovertext = ~paste0(
-          'RAW-MKR Balance: ',
-          scales::label_comma()(floor(NEW_VALUE)),
-          '\n Raw MKR TW Score: ',
-          scales::label_comma()(floor(TIME_WEIGHTED_SCORE))
-        )
-) %>% 
-  layout(title = '\n Transaction Count by MKR holdings and most recent tx date',
-         xaxis = list(title = 'LOG(Current MKR Balance)'),
-         yaxis = list(title = 'Date of Last TX',
-                      range = c(min(eoa_stats$LAST_TX_DATE), max(eoa_stats$LAST_TX_DATE)))
+          'LOG MKR Balance:',
+          round(log(NEW_VALUE), 2),'\n Raw MKR Balance: ', 
+          scales::label_comma()(floor(NEW_VALUE))
+        ),
+        type = 'box') %>% 
+  layout(title = '\nDistribution of MKR among target EOAs with and without ENS',
+         xaxis = list(title = 'Has ENS'),
+         yaxis = list(title = 'LOG(MKR Balance)')
   )
+
+
+eoa_name_smmry <- eoa_name_balance %>% group_by(has_ENS) %>% 
+  summarise(num = n(),
+            total = scales::label_comma()(floor(sum(NEW_VALUE))),
+            avg = scales::label_comma()(floor(mean(NEW_VALUE))), 
+            median = scales::label_comma()(floor(median(NEW_VALUE))),
+            max = scales::label_comma()(floor(max(NEW_VALUE))),
+            sd = scales::label_comma()(floor(sd(NEW_VALUE))))
+
+reactable(eoa_name_smmry,
+columns = list(
+  has_ENS = colDef(name = 'Has ENS'),
+  num = colDef(name = 'Count', align = 'right'),
+  total = colDef(name = 'Total', align = 'right'),
+  avg = colDef(name = 'Average', align = 'right'),
+  median = colDef(name = 'Median', align = 'right'),
+  max = colDef(name = 'Max', align = 'right'),
+  sd = colDef(name = 'Standard Deviation', align = 'right')
+))
+
+write.csv(eoa_with_names, "eoa_w_ens_name.csv")
+write.csv(eoa_name_balance, "unique_eoa_has_ens_or_not.csv")
+
 ```
+
+
+## Snapshot 
+
+To improve identification of addresses, snapshot voting history is assessed to identify 
+potential DAO partnerships for boosting delegation. 
+
+TODO

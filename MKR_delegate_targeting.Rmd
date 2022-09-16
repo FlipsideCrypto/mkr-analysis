@@ -406,7 +406,6 @@ ens_label_problem <- ens_label[!(ens_label$HEX_TOKENID %in% ens_label_full$HEX_T
 
 eoa_nfts <- merge(ens, ens_label_full, by = 'HEX_TOKENID', all.x = TRUE)
 
-
 eoa_label <- unique(eoa_nfts[, c("ADDRESS", "ENS_NAME")])
   
 eoa_with_names <- merge(final_eoa, eoa_label, by = "ADDRESS", all.x = TRUE, all.y = TRUE)
